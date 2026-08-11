@@ -5,12 +5,68 @@ Automazione Ricerca Treni - RFI QSCS
 Legge numeri treni e date da Excel e li ricerca automaticamente nel browser
 """
 
+import sys
+import os
+import subprocess
+
+# ==============================================
+# INSTALLAZIONE AUTOMATICA DIPENDENZE (PRIMO)
+# ==============================================
+
+def installa_dipendenze():
+    """Installa automaticamente le dipendenze necessarie"""
+    dipendenze = ['pyautogui', 'openpyxl']
+    
+    print("=" * 60)
+    print("VERIFICA DIPENDENZE")
+    print("=" * 60)
+    print()
+    
+    da_installare = []
+    
+    for dipendenza in dipendenze:
+        try:
+            __import__(dipendenza)
+            print(f"✅ {dipendenza:15s} - Installato")
+        except ImportError:
+            print(f"❌ {dipendenza:15s} - NON installato")
+            da_installare.append(dipendenza)
+    
+    print()
+    
+    if da_installare:
+        print(f"⚠️  Installazione richiesta per: {', '.join(da_installare)}")
+        print()
+        print("Installazione in corso...\n")
+        
+        for dipendenza in da_installare:
+            print(f"📦 Installazione di {dipendenza}...")
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', dipendenza, '-q'])
+                print(f"✅ {dipendenza} installato con successo\n")
+            except subprocess.CalledProcessError:
+                print(f"❌ Errore nell'installazione di {dipendenza}")
+                print("Prova a installare manualmente:")
+                print(f"   pip install {dipendenza}\n")
+                sys.exit(1)
+        
+        print("=" * 60)
+        print("✅ Tutte le dipendenze sono state installate!")
+        print("=" * 60 + "\n")
+    else:
+        print("=" * 60)
+        print("✅ Tutte le dipendenze sono già installate!")
+        print("=" * 60 + "\n")
+
+
+# Installa le dipendenze PRIMA di importarle
+installa_dipendenze()
+
+# ORA possiamo importare i moduli
 import pyautogui
 import openpyxl
 import time
 from datetime import datetime
-import os
-import sys
 
 # ==============================================
 # CONFIGURAZIONE - COORDINATE CALIBRATE
@@ -60,7 +116,10 @@ def valida_file_excel():
     if not os.path.exists(EXCEL_FILE):
         print(f"❌ ERRORE: File non trovato: {EXCEL_FILE}")
         print(f"📁 Cartella corrente: {os.getcwd()}")
-        print(f"📂 File disponibili: {os.listdir('.')}")
+        print(f"📂 File disponibili:")
+        for f in os.listdir('.'):
+            if f.endswith('.xlsx'):
+                print(f"   - {f}")
         sys.exit(1)
     print(f"✅ File Excel trovato: {EXCEL_FILE}")
 
@@ -176,6 +235,7 @@ def automazione_principale():
     print("=" * 60)
     print("AUTOMAZIONE RICERCA TRENI")
     print("=" * 60)
+    print()
     
     # Valida file
     valida_file_excel()
@@ -268,7 +328,9 @@ COME RICALIBRARE LE COORDINATE (se necessario):
   5. Salva il file e riavvia
 
 REQUISITI:
-  pip install pyautogui openpyxl
+  Le dipendenze verranno installate automaticamente al primo avvio:
+  - pyautogui
+  - openpyxl
 
 FILE EXCEL:
   - La colonna A deve contenere i numeri dei treni
