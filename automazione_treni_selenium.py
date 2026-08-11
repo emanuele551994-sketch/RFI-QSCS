@@ -72,8 +72,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import openpyxl
 
 # ==============================================
@@ -146,7 +146,7 @@ def carica_dati_excel():
 
 
 def inizializza_browser():
-    """Inizializza il browser Chrome con Selenium"""
+    """Inizializza il browser Chrome/Chromium con Selenium"""
     print("\n" + "=" * 60)
     print("INIZIALIZZAZIONE BROWSER")
     print("=" * 60 + "\n")
@@ -155,27 +155,59 @@ def inizializza_browser():
         # Opzioni Chrome
         chrome_options = Options()
         
-        # Se in un ambiente headless (Codespaces), aggiungi opzioni headless
-        if os.environ.get('GITHUB_WORKSPACE'):
-            print("🌐 Ambiente Codespaces rilevato - Modalità headless\n")
+        # Rileva se siamo in Codespaces
+        is_codespaces = os.environ.get('GITHUB_WORKSPACE') is not None
+        
+        if is_codespaces:
+            print("🌐 Ambiente Codespaces rilevato\n")
+            print("📦 Verifica di Chromium...")
+            
+            # Verifica se Chromium è installato
+            result = subprocess.run(['which', 'chromium-browser'], capture_output=True)
+            
+            if result.returncode != 0:
+                print("❌ Chromium non trovato!")
+                print("\n📥 Installa Chromium con:")
+                print("   apt-get update && apt-get install -y chromium-browser")
+                print("\nPoi riavvia il programma.\n")
+                sys.exit(1)
+            
+            print("✅ Chromium trovato\n")
+            
+            # Configura per Chromium in Codespaces
+            chrome_options.binary_location = '/usr/bin/chromium-browser'
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+        else:
+            print("💻 Ambiente Desktop rilevato\n")
         
+        # Opzioni comuni
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
         # Inizializza il driver
         print("📦 Caricamento WebDriver Chrome...")
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        if is_codespaces:
+            # In Codespaces usa Chromium direttamente
+            driver = webdriver.Chrome(options=chrome_options)
+        else:
+            # Su desktop scarica ChromeDriver
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
         
         print("✅ Browser inizializzato\n")
         return driver
     
     except Exception as e:
         print(f"❌ ERRORE nell'inizializzazione del browser: {e}")
+        print("\n💡 Suggerimenti:")
+        print("   - Su Codespaces: installa Chromium con:")
+        print("     apt-get update && apt-get install -y chromium-browser")
+        print("   - Su Desktop: scarica Chrome da https://www.google.com/chrome/")
         sys.exit(1)
 
 
@@ -323,8 +355,10 @@ def automazione_principale():
             print(f"⚠️  Automazione completata con {errori} errori\n")
         
         # Tieni il browser aperto per 10 secondi per vedere i risultati
-        print("⏳ Browser resterà aperto per 10 secondi...")
-        time.sleep(10)
+        is_codespaces = os.environ.get('GITHUB_WORKSPACE') is not None
+        if not is_codespaces:
+            print("⏳ Browser resterà aperto per 10 secondi...")
+            time.sleep(10)
     
     finally:
         driver.quit()
@@ -365,20 +399,31 @@ REQUISITI (installati automaticamente):
   - openpyxl
   - webdriver-manager
 
+INSTALLAZIONE SU CODESPACES:
+  1. Apri il terminale
+  2. Esegui: apt-get update && apt-get install -y chromium-browser
+  3. Esegui: python automazione_treni_selenium.py
+
+INSTALLAZIONE SU DESKTOP:
+  1. Scarica Chrome da https://www.google.com/chrome/
+  2. Metti il file nella cartella con l'Excel
+  3. Esegui: python automazione_treni_selenium.py
+
 FILE EXCEL:
   - La colonna A deve contenere i numeri dei treni
   - La colonna B deve contenere le date (formato DD/MM/YYYY)
   - I dati iniziano dalla riga 25
 
 FUNZIONA SU:
-  ✓ Windows / Mac / Linux
+  ✓ Windows / Mac / Linux (con Chrome)
+  ✓ Codespaces (con Chromium)
   ✓ Desktop con browser
-  ✓ Codespaces (modalità headless)
+  ✓ Ambienti cloud
 
 NOTE:
   - Non necessita PyAutoGUI
   - Non ha problemi con display X11
-  - Funziona anche in ambienti cloud
+  - Rileva automaticamente l'ambiente
 """)
 
 
